@@ -1,0 +1,88 @@
+{
+  "// Comment": "Production configuration for distributed multi-server deployment",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "60s",
+    "write_timeout": "60s",
+    "max_connections": 50000
+  },
+  "auth": {
+    "jwt_secret": "USE_ENVIRONMENT_VARIABLE",
+    "token_expiration": "12h",
+    "refresh_token_expiration": "168h",
+    "enable_rbac": true
+  },
+  "storage": {
+    "type": "s3",
+    "base_path": "",
+    "s3": {
+      "endpoint": "",
+      "region": "us-east-1",
+      "bucket": "my-livestream-recordings",
+      "access_key_id": "USE_ENVIRONMENT_VARIABLE",
+      "secret_access_key": "USE_ENVIRONMENT_VARIABLE",
+      "use_ssl": true
+    }
+  },
+  "streaming": {
+    "enable_rtmp": true,
+    "enable_hls": true,
+    "enable_webrtc": true,
+    "rtmp": {
+      "port": 1935,
+      "chunk_size": 4096,
+      "enable_ssl": true
+    },
+    "hls": {
+      "segment_duration": "4s",
+      "playlist_length": 6,
+      "enable_abr": true
+    },
+    "webrtc": {
+      "stun_servers": ["stun:stun.l.google.com:19302"],
+      "turn_servers": [
+        {
+          "urls": ["turn:turn.example.com:3478"],
+          "username": "user",
+          "credential": "pass"
+        }
+      ]
+    }
+  },
+  "chat": {
+    "enabled": true,
+    "max_message_length": 500,
+    "rate_limit_per_second": 3,
+    "enable_persistence": false,
+    "// Note": "SDK provides real-time delivery only. Persist to your own DB if needed."
+  },
+  "analytics": {
+    "enabled": true,
+    "enable_prometheus": true,
+    "prometheus_port": 9090
+  },
+  "cluster": {
+    "enabled": true,
+    "node_id": "node-1",
+    "discovery_type": "inmemory",
+    "virtual_nodes": 150,
+    "// Note": "In production, use consul or etcd for discovery_type"
+  },
+  "redis": {
+    "enabled": true,
+    "host": "redis.internal.example.com",
+    "port": 6379,
+    "password": "USE_ENVIRONMENT_VARIABLE",
+    "db": 0,
+    "pool_size": 50,
+    "max_retries": 3,
+    "session_ttl": "24h",
+    "// Note": "Required for distributed session management in cluster mode"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output_path": "stdout"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "// Comment": "Simple livestreaming configuration for single server",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "30s",
+    "write_timeout": "30s",
+    "max_connections": 5000
+  },
+  "auth": {
+    "jwt_secret": "change-me-in-production",
+    "token_expiration": "24h",
+    "refresh_token_expiration": "168h",
+    "enable_rbac": true
+  },
+  "storage": {
+    "type": "local",
+    "base_path": "./storage"
+  },
+  "streaming": {
+    "enable_rtmp": true,
+    "enable_hls": true,
+    "enable_webrtc": false,
+    "rtmp": {
+      "port": 1935,
+      "chunk_size": 4096,
+      "enable_ssl": false
+    },
+    "hls": {
+      "segment_duration": "6s",
+      "playlist_length": 5,
+      "enable_abr": true
+    }
+  },
+  "chat": {
+    "enabled": true,
+    "max_message_length": 500,
+    "rate_limit_per_second": 5,
+    "enable_persistence": false
+  },
+  "analytics": {
+    "enabled": false,
+    "enable_prometheus": false
+  },
+  "cluster": {
+    "enabled": false
+  },
+  "redis": {
+    "enabled": false
+  },
+  "logging": {
+    "level": "info",
+    "format": "text",
+    "output_path": "stdout"
+  }
+}

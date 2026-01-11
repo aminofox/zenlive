@@ -1,0 +1,80 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "30s",
+    "write_timeout": "30s",
+    "max_connections": 10000
+  },
+  "auth": {
+    "jwt_secret": "your-secret-key-here-change-in-production",
+    "token_expiration": "24h",
+    "refresh_token_expiration": "168h",
+    "enable_rbac": true
+  },
+  "storage": {
+    "type": "local",
+    "base_path": "./storage",
+    "s3": {
+      "endpoint": "",
+      "region": "us-east-1",
+      "bucket": "",
+      "access_key_id": "",
+      "secret_access_key": "",
+      "use_ssl": true
+    }
+  },
+  "streaming": {
+    "enable_rtmp": true,
+    "enable_hls": true,
+    "enable_webrtc": true,
+    "rtmp": {
+      "port": 1935,
+      "chunk_size": 4096,
+      "enable_ssl": false
+    },
+    "hls": {
+      "segment_duration": "6s",
+      "playlist_length": 5,
+      "enable_abr": true
+    },
+    "webrtc": {
+      "stun_servers": ["stun:stun.l.google.com:19302"],
+      "turn_servers": []
+    }
+  },
+  "chat": {
+    "enabled": true,
+    "max_message_length": 500,
+    "rate_limit_per_second": 5,
+    "enable_persistence": false,
+    "// Note": "Persistence is in-memory only. Users handle database persistence."
+  },
+  "analytics": {
+    "enabled": false,
+    "enable_prometheus": false,
+    "prometheus_port": 9090
+  },
+  "cluster": {
+    "enabled": false,
+    "node_id": "",
+    "discovery_type": "inmemory",
+    "virtual_nodes": 150
+  },
+  "redis": {
+    "enabled": false,
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "db": 0,
+    "pool_size": 10,
+    "max_retries": 3,
+    "session_ttl": "24h",
+    "// Note": "Required when cluster.enabled = true"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output_path": "stdout"
+  }
+}

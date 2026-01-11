@@ -1,0 +1,47 @@
+{
+  "// Comment": "Configuration for 1-1 video/audio calls (WebRTC only)",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "30s",
+    "write_timeout": "30s",
+    "max_connections": 1000
+  },
+  "auth": {
+    "jwt_secret": "change-me-in-production",
+    "token_expiration": "24h",
+    "refresh_token_expiration": "168h",
+    "enable_rbac": false
+  },
+  "storage": {
+    "type": "local",
+    "base_path": "./storage"
+  },
+  "streaming": {
+    "enable_rtmp": false,
+    "enable_hls": false,
+    "enable_webrtc": true,
+    "webrtc": {
+      "stun_servers": ["stun:stun.l.google.com:19302"],
+      "turn_servers": []
+    }
+  },
+  "chat": {
+    "enabled": false,
+    "// Note": "Chat not needed for 1-1 calls"
+  },
+  "analytics": {
+    "enabled": false
+  },
+  "cluster": {
+    "enabled": false
+  },
+  "redis": {
+    "enabled": false
+  },
+  "logging": {
+    "level": "debug",
+    "format": "text",
+    "output_path": "stdout"
+  }
+}
