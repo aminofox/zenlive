@@ -7,6 +7,7 @@ import (
 	"github.com/aminofox/zenlive/pkg/config"
 	"github.com/aminofox/zenlive/pkg/errors"
 	"github.com/aminofox/zenlive/pkg/logger"
+	"github.com/aminofox/zenlive/pkg/room"
 	"github.com/aminofox/zenlive/pkg/types"
 )
 
@@ -17,6 +18,9 @@ type SDK struct {
 
 	// Streaming providers
 	providers map[types.StreamProtocol]types.StreamProvider
+
+	// Room manager for video conferencing
+	roomManager *room.RoomManager
 
 	// Internal state
 	mu        sync.RWMutex
@@ -33,11 +37,15 @@ func New(cfg *config.Config) (*SDK, error) {
 	logLevel := logger.ParseLevel(cfg.Logging.Level)
 	log := logger.NewDefaultLogger(logLevel, cfg.Logging.Format)
 
+	// Create room manager
+	roomMgr := room.NewRoomManager(log)
+
 	sdk := &SDK{
-		config:    cfg,
-		logger:    log,
-		providers: make(map[types.StreamProtocol]types.StreamProvider),
-		isRunning: false,
+		config:      cfg,
+		logger:      log,
+		providers:   make(map[types.StreamProtocol]types.StreamProvider),
+		roomManager: roomMgr,
+		isRunning:   false,
 	}
 
 	return sdk, nil
@@ -100,6 +108,11 @@ func (s *SDK) Stop() error {
 				logger.Err(err),
 			)
 		}
+	}
+
+	// Shutdown room manager
+	if s.roomManager != nil {
+		s.roomManager.Shutdown()
 	}
 
 	s.isRunning = false
@@ -167,6 +180,11 @@ func (s *SDK) SetLogger(log logger.Logger) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.logger = log
+}
+
+// GetRoomManager returns the room manager instance
+func (s *SDK) GetRoomManager() *room.RoomManager {
+	return s.roomManager
 }
 
 // Version returns the SDK version
