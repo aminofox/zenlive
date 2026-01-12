@@ -1,103 +1,212 @@
-# ZenLive - Go Livestream SDK
+# ZenLive - Go Live Streaming SDK
 
-[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/aminofox/zenlive)](https://goreportcard.com/report/github.com/aminofox/zenlive)
 [![GoDoc](https://godoc.org/github.com/aminofox/zenlive?status.svg)](https://godoc.org/github.com/aminofox/zenlive)
 
-**ZenLive** is a production-ready Go SDK for building livestreaming platforms. Similar to LiveKit and Agora, ZenLive provides everything you need to create powerful streaming applications with multiple protocol support (RTMP, HLS, WebRTC), real-time chat, recording, and analytics.
+Production-ready Go SDK for building live streaming platforms. Similar to LiveKit and Agora, ZenLive provides RTMP, HLS, WebRTC streaming with real-time chat, recording, and analytics.
 
-## 🌟 Why ZenLive?
+## 🚀 Quick Start (5 Minutes)
 
-- **🚀 Easy Integration**: Simple SDK API, just import and use
-- **📡 Multi-Protocol**: RTMP, HLS, and WebRTC support out of the box
-- **💬 Real-time Chat**: Built-in WebSocket chat with moderation
-- **📹 Recording**: Automatic recording to local or S3-compatible storage
-- **📊 Analytics**: Built-in metrics and Prometheus export
-- **🔒 Secure**: JWT auth, RBAC, encryption, and audit logging
-- **⚡ Scalable**: Horizontal scaling with load balancing
-- **🎨 Interactive**: Polls, virtual gifts, and reactions
-- **📚 Well Documented**: Comprehensive docs and 11+ examples
-
-## 📦 Installation
+### 1. Install
 
 ```bash
-go get github.com/aminofox/zenlive@v1.0.0
+go get github.com/aminofox/zenlive
 ```
 
-**Requirements**: Go 1.24.0 or later
-
-## 🚀 Quick Start
+### 2. Create Server
 
 ```go
 package main
 
 import (
-    "context"
-    "log"
-    
     "github.com/aminofox/zenlive"
     "github.com/aminofox/zenlive/pkg/config"
 )
 
 func main() {
-    // Create SDK instance
     cfg := config.DefaultConfig()
-    sdk, err := zenlive.New(cfg)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Start SDK
-    if err := sdk.Start(); err != nil {
-        log.Fatal(err)
-    }
+    sdk, _ := zenlive.New(cfg)
+    sdk.Start()
     defer sdk.Stop()
-
-    log.Println("✅ ZenLive SDK is running!")
     
-    // Your streaming application logic here
-    select {}
+    select {} // Keep running
 }
 ```
 
-**See [docs/getting-started.md](docs/getting-started.md) for a complete tutorial.**
+### 3. Stream & Watch
 
-## ✨ Key Features
+```bash
+# Publish with OBS or FFmpeg
+ffmpeg -re -i video.mp4 -c copy -f flv rtmp://localhost:1935/live/mystream
 
-### 📡 Multi-Protocol Streaming
-### 📡 Multi-Protocol Streaming
+# Watch in browser
+open http://localhost:8080/live/mystream/index.m3u8
+```
 
-- **RTMP**: Industry-standard protocol for stream ingestion from OBS, FFmpeg
-- **HLS**: HTTP-based adaptive bitrate streaming for web/mobile playback  
-- **WebRTC**: Ultra-low latency (<500ms) peer-to-peer streaming
+**That's it!** Your streaming server is running.
 
-### 💬 Real-time Chat
+📖 **[Full Documentation →](docs/QUICKSTART.md)**
 
-- Room-based WebSocket chat (one room per stream)
-- Message persistence and history
-- Moderation tools (ban, mute, delete)
-- Rate limiting and spam protection
-- User presence tracking
+## ✨ Features
 
-### 📹 Recording & Storage
+### Streaming Protocols
+- **RTMP** - Ingest from OBS, FFmpeg, Streamlabs
+- **HLS** - Deliver to web/mobile with adaptive bitrate
+- **WebRTC** - Ultra-low latency (<1s) for video calls
 
-- Automatic recording to MP4/FLV formats
-- Local filesystem or S3-compatible cloud storage
-- Thumbnail generation
-- Metadata management and search
+### Additional Features
+- **Real-time Chat** - WebSocket chat with moderation
+- **Recording** - Save to local storage or S3
+- **Analytics** - Real-time metrics & Prometheus export
+- **Authentication** - JWT & role-based access control
+- **Scalable** - Horizontal scaling with Redis
 
-### 🔐 Security & Authentication
+## 📦 Use Cases
 
-- JWT-based authentication
-- Role-Based Access Control (RBAC)
-- Token encryption and refresh
-- Rate limiting and DDoS protection
+| Use Case | Protocols | Config |
+|----------|-----------|--------|
+| **Live Streaming Platform** | RTMP + HLS | [Example](examples/basic/) |
+| **Video Call (1-1)** | WebRTC | [Example](examples/webrtc/) |
+| **Video Conference** | WebRTC + Chat | [Example](examples/chat/) |
+| **Recording Server** | RTMP + HLS + Storage | [Example](examples/storage/) |
+
+## 🎯 SDK Philosophy
+
+**ZenLive focuses on REAL-TIME DELIVERY - not data persistence.**
+
+✅ **SDK Does:**
+- Real-time streaming (RTMP, HLS, WebRTC)
+- Real-time chat delivery
+- Session management
+- Recording to local/S3
+
+❌ **SDK Does NOT:**
+- Database persistence (you handle this)
+- Chat history storage (you save to your DB)
+- User account management (your responsibility)
+
+💡 **Your Responsibility:** The SDK delivers real-time. YOU decide what to save to YOUR database.
+
+## 📚 Documentation
+
+- **[Quick Start](docs/QUICKSTART.md)** - Get started in 5 minutes
+- **[Architecture](docs/ARCHITECTURE.md)** - Understand how ZenLive works
+- **[Examples](examples/)** - 11+ working code examples
+- **[API Reference](https://pkg.go.dev/github.com/aminofox/zenlive)** - Complete API docs
+
+## 💻 Examples
+
+```bash
+# Basic streaming server
+cd examples/basic && go run main.go
+
+# With authentication
+cd examples/auth && go run main.go
+
+# WebRTC video call
+cd examples/webrtc && go run main.go
+
+# With chat
+cd examples/chat && go run main.go
+
+# With recording
+cd examples/storage && go run main.go
+```
+
+See [examples/](examples/) for all 11+ examples.
+
+## 🔧 Configuration
+
+### Simple (Development)
+```go
+cfg := config.DefaultConfig()
+cfg.Streaming.EnableRTMP = true
+cfg.Streaming.EnableHLS = true
+```
+
+### With Chat
+```go
+cfg.Chat.Enabled = true
+
+// Save chat to YOUR database
+chatServer.OnMessage(func(msg *chat.Message) {
+    myDB.SaveMessage(msg) // Your code
+})
+```
+
+### Production
+```go
+cfg := config.DefaultConfig()
+cfg.Auth.JWTSecret = os.Getenv("JWT_SECRET")
+cfg.Storage.Type = "s3"
+cfg.Analytics.Enabled = true
+```
+
+### Multi-Server (Cluster)
+```go
+cfg.Cluster.Enabled = true
+cfg.Redis.Enabled = true // Required for cluster
+```
+
+## 🏗️ Architecture
+
+```
+Publishers (OBS/FFmpeg)
+    ↓ RTMP
+ZenLive SDK
+    ├── RTMP Server
+    ├── HLS Server
+    ├── WebRTC Server
+    ├── Chat Server
+    └── Storage
+    ↓
+Viewers (Web/Mobile)
+```
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
+## 📊 Performance
+
+| Metric | Single Server | Cluster (3 nodes) |
+|--------|---------------|-------------------|
+| Concurrent Streams | ~1,000 | ~10,000+ |
+| Concurrent Viewers | ~10,000 | ~100,000+ |
+| Latency (HLS) | 10-30s | 10-30s |
+| Latency (WebRTC) | <1s | <1s |
+
+## 🔐 Security
+
+- JWT authentication
+- Role-based access control (RBAC)
+- TLS/HTTPS encryption
+- Rate limiting
+- Stream key rotation
 - Audit logging
 
-### 📊 Analytics & Monitoring *(Optional)*
+## 🤝 Contributing
 
-- Real-time stream metrics (viewers, bitrate, FPS)
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md).
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file.
+
+## 🆘 Support
+
+- **Documentation**: [docs/](docs/)
+- **Examples**: [examples/](examples/)
+- **Issues**: [GitHub Issues](https://github.com/aminofox/zenlive/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/aminofox/zenlive/discussions)
+
+## 🌟 Star Us!
+
+If you find ZenLive useful, please give us a star! ⭐
+
+---
+
+**Made with ❤️ by the ZenLive Team**
 - Viewer analytics and session tracking
 - Prometheus metrics export
 - Health check endpoints

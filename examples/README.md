@@ -1,68 +1,68 @@
 # ZenLive Examples
 
-This directory contains working examples demonstrating various ZenLive features. Each example is a complete, runnable application.
+Complete, runnable examples demonstrating ZenLive features. Each example is a standalone application.
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Navigate to any example
-cd examples/basic
+# Clone the repo
+git clone https://github.com/aminofox/zenlive
+cd zenlive/examples
 
-# Run the example
-go run main.go
-```
-
-## Available Examples
-
-### 1. Basic - Simple Streaming Server
-
-**Location**: [`basic/`](basic/)  
-**Complexity**: ⭐ Beginner  
-**What it demonstrates**:
-- RTMP server setup
-- HLS transmuxing
-- Basic stream management
-
-**Run**:
-```bash
+# Run any example
 cd basic
 go run main.go
 ```
 
+## 📚 Examples
+
+### 1. Basic - Simple Streaming Server ⭐
+
+**Path**: [`basic/`](basic/)  
+**Level**: Beginner  
+**Demonstrates**:
+- RTMP server setup
+- HLS streaming
+- Basic stream management
+
+**Run**:
+```bash
+cd basic && go run main.go
+```
+
 **Test**:
 ```bash
-# Publish with OBS or FFmpeg
+# Publish
 ffmpeg -re -i test.mp4 -c copy -f flv rtmp://localhost:1935/live/test
 
-# Play with FFplay
+# Watch
 ffplay http://localhost:8080/live/test/index.m3u8
 ```
 
 ---
 
-### 2. Authentication - User Auth & RBAC
+### 2. Authentication - JWT & RBAC
 
-**Location**: [`auth/`](auth/)  
-**Complexity**: ⭐⭐ Intermediate  
-**What it demonstrates**:
+**Path**: [`auth/`](auth/)  
+**Level**: Intermediate  
+**Demonstrates**:
 - JWT authentication
-- Role-based access control (RBAC)
+- Role-based access control
 - Stream key validation
 - Session management
 
 **Run**:
 ```bash
-cd auth
-go run main.go
+cd auth && go run main.go
 ```
 
 **Test**:
 ```bash
-# Generate token
+# Login
 curl -X POST http://localhost:8080/auth/login \
   -d '{"username":"admin","password":"admin"}'
 
-# Use token to create stream
+# Create stream with token
 curl -X POST http://localhost:8080/api/streams \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"name":"mystream"}'
@@ -70,69 +70,78 @@ curl -X POST http://localhost:8080/api/streams \
 
 ---
 
-### 3. RTMP - Advanced RTMP Features
+### 3. Chat - Real-time Chat
 
-**Location**: [`rtmp/`](rtmp/)  
-**Complexity**: ⭐⭐ Intermediate  
-**What it demonstrates**:
-- RTMP handshake protocol
-- Chunk handling
-- AMF encoding/decoding
-- Multiple concurrent streams
-- Bandwidth management
+**Path**: [`chat/`](chat/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- WebSocket chat server
+- Chat rooms (one per stream)
+- Message broadcasting
+- **Important**: Chat history persistence (YOUR responsibility)
 
 **Run**:
 ```bash
-cd rtmp
-go run main.go
+cd chat && go run main.go
+```
+
+**Note**: This example shows how to receive chat messages in real-time. **YOU must save messages to YOUR database** if you need chat history.
+
+```go
+// Example: Save to your database
+chatServer.OnMessage(func(msg *chat.Message) {
+    // SDK broadcasts in real-time
+    chatServer.Broadcast(msg)
+    
+    // YOU save to YOUR database
+    myDB.Exec("INSERT INTO messages ...", msg)
+})
 ```
 
 ---
 
-### 4. HLS - HTTP Live Streaming
+### 4. Storage - Recording Streams
 
-**Location**: [`hls/`](hls/)  
-**Complexity**: ⭐⭐ Intermediate  
-**What it demonstrates**:
-- HLS segment generation
-- Adaptive bitrate streaming (ABR)
-- DVR (time-shifting)
-- Playlist management
+**Path**: [`storage/`](storage/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- Recording to local storage
+- Recording to S3
+- Thumbnail generation
+- **Important**: Stream metadata persistence (YOUR responsibility)
 
 **Run**:
 ```bash
-cd hls
-go run main.go
+cd storage && go run main.go
 ```
 
-**Test**:
-```bash
-# Publish stream
-ffmpeg -re -i test.mp4 -c copy -f flv rtmp://localhost:1935/live/test
+**Note**: SDK records video files to storage. **YOU must save stream metadata to YOUR database**.
 
-# Check playlist
-curl http://localhost:8080/live/test/index.m3u8
-
-# Play in browser (needs hls.js)
-open http://localhost:8080/player.html?stream=test
+```go
+// Example: Save metadata to your database
+sdk.OnStreamEnd(func(stream *types.Stream) {
+    // SDK saved video file
+    
+    // YOU save metadata to YOUR database
+    myDB.Exec("INSERT INTO streams ...", stream)
+})
 ```
 
 ---
 
-### 5. WebRTC - Ultra-Low Latency Streaming
+### 5. WebRTC - Ultra-Low Latency
 
-**Location**: [`webrtc/`](webrtc/)  
-**Complexity**: ⭐⭐⭐ Advanced  
-**What it demonstrates**:
+**Path**: [`webrtc/`](webrtc/)  
+**Level**: Advanced  
+**Demonstrates**:
 - WebRTC signaling
 - SFU (Selective Forwarding Unit)
-- Bandwidth estimation
 - Sub-second latency
+- Bandwidth adaptation
 
 **Run**:
 ```bash
-cd webrtc
-go run main.go
+cd webrtc && go run main.go
 ```
 
 **Test**:
@@ -146,7 +155,251 @@ open http://localhost:8443/play.html
 
 ---
 
-### 6. Chat - Real-time Chat Integration
+### 6. Analytics - Metrics & Monitoring
+
+**Path**: [`analytics/`](analytics/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- Real-time stream metrics
+- Viewer tracking
+- Prometheus export
+- **Important**: Long-term analytics (YOUR responsibility)
+
+**Run**:
+```bash
+cd analytics && go run main.go
+
+# Check Prometheus metrics
+curl http://localhost:9090/metrics
+```
+
+**Note**: SDK provides real-time metrics. **YOU aggregate and store to YOUR database** for long-term analytics.
+
+---
+
+### 7. Scalability - Multi-Server Cluster
+
+**Path**: [`scalability/`](scalability/)  
+**Level**: Advanced  
+**Demonstrates**:
+- Cluster mode setup
+- Redis for distributed sessions
+- Load balancing
+- Multi-node deployment
+
+**Run**:
+```bash
+# Start Redis first
+docker run -d -p 6379:6379 redis
+
+# Start node 1
+cd scalability
+NODE_ID=node-1 go run main.go
+
+# Start node 2 (different terminal)
+NODE_ID=node-2 PORT=8081 go run main.go
+```
+
+**Important**: Redis is **ONLY** for cluster mode. Single server doesn't need Redis.
+
+---
+
+### 8. Security - Advanced Security
+
+**Path**: [`security/`](security/)  
+**Level**: Advanced  
+**Demonstrates**:
+- TLS/HTTPS
+- Rate limiting
+- IP filtering
+- Audit logging
+- Stream key rotation
+
+**Run**:
+```bash
+cd security && go run main.go
+```
+
+---
+
+### 9. Interactive - Polls & Gifts
+
+**Path**: [`interactive/`](interactive/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- Live polls
+- Virtual gifts
+- Real-time reactions
+- Currency management
+
+**Run**:
+```bash
+cd interactive && go run main.go
+```
+
+---
+
+### 10. HLS - HTTP Live Streaming
+
+**Path**: [`hls/`](hls/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- HLS segment generation
+- Adaptive bitrate streaming (ABR)
+- DVR (time-shifting)
+- Playlist management
+
+**Run**:
+```bash
+cd hls && go run main.go
+```
+
+---
+
+### 11. RTMP - Advanced RTMP
+
+**Path**: [`rtmp/`](rtmp/)  
+**Level**: Advanced  
+**Demonstrates**:
+- RTMP handshake protocol
+- Chunk handling
+- AMF encoding/decoding
+- Multiple concurrent streams
+
+**Run**:
+```bash
+cd rtmp && go run main.go
+```
+
+---
+
+### 12. SDK - Client SDK Usage
+
+**Path**: [`sdk/`](sdk/)  
+**Level**: Intermediate  
+**Demonstrates**:
+- Stream management API
+- Event system
+- Webhook delivery
+- State machine
+
+**Run**:
+```bash
+cd sdk && go run main.go
+```
+
+---
+
+## 💡 Important Notes
+
+### Database Persistence
+
+**ZenLive SDK does NOT persist application data to database.**
+
+✅ **SDK handles**: Real-time delivery (streaming, chat, metrics)  
+❌ **SDK does NOT handle**: Database storage
+
+**YOUR responsibility**:
+- Save chat messages to YOUR database
+- Save stream metadata to YOUR database
+- Save user data to YOUR database
+- Design YOUR own database schema
+
+**Example**:
+```go
+// Chat - YOU save to database
+chatServer.OnMessage(func(msg *Message) {
+    myDB.SaveMessage(msg) // Your code
+})
+
+// Stream - YOU save metadata
+sdk.OnStreamEnd(func(stream *Stream) {
+    myDB.SaveStream(stream) // Your code
+})
+
+// Analytics - YOU aggregate data
+sdk.OnViewerJoin(func(viewer *Viewer) {
+    myDB.LogViewerAction(viewer) // Your code
+})
+```
+
+### Redis Usage
+
+**Redis is ONLY for cluster mode** (multi-server deployments).
+
+- ✅ **Cluster mode**: Redis required for distributed sessions
+- ❌ **Single server**: Redis NOT needed
+
+```go
+// Single server - NO Redis
+cfg.Cluster.Enabled = false
+cfg.Redis.Enabled = false
+
+// Multi-server - YES Redis (required)
+cfg.Cluster.Enabled = true
+cfg.Redis.Enabled = true
+```
+
+### Chat Philosophy
+
+**Chat is real-time delivery only.**
+
+- SDK broadcasts messages to connected clients in real-time
+- **YOU save to YOUR database** for chat history
+- Chat is optional (disable for simple video calls)
+
+```go
+// Livestream - enable chat
+cfg.Chat.Enabled = true
+
+// Video call - disable chat
+cfg.Chat.Enabled = false
+```
+
+## 🎯 Use Case Examples
+
+### Livestream Platform (like Twitch)
+```bash
+cd basic  # RTMP + HLS
+# or
+cd chat   # RTMP + HLS + Chat
+```
+
+### Video Call (1-1)
+```bash
+cd webrtc  # WebRTC only
+```
+
+### Video Conference (Multi-user)
+```bash
+cd webrtc  # WebRTC + optional chat
+```
+
+### Recording Server
+```bash
+cd storage  # RTMP + HLS + Recording
+```
+
+### Production Deployment
+```bash
+cd scalability  # Cluster mode
+```
+
+## 📖 Documentation
+
+- **[Quick Start](../docs/QUICKSTART.md)** - Get started in 5 minutes
+- **[Architecture](../docs/ARCHITECTURE.md)** - Understand how ZenLive works
+- **[Configuration](config/)** - Config examples for different scenarios
+
+## 🆘 Need Help?
+
+1. Check the example code
+2. Read [QUICKSTART.md](../docs/QUICKSTART.md)
+3. Visit [GitHub Issues](https://github.com/aminofox/zenlive/issues)
+
+---
+
+**Happy Coding! 🎉**
 
 **Location**: [`chat/`](chat/)  
 **Complexity**: ⭐⭐ Intermediate  
