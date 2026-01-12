@@ -187,6 +187,117 @@ func (s *SDK) GetRoomManager() *room.RoomManager {
 	return s.roomManager
 }
 
+// Room Management Methods
+
+// CreateRoom creates a new room with the given name and options
+func (s *SDK) CreateRoom(name string, opts *room.CreateRoomRequest) (*room.Room, error) {
+	if opts == nil {
+		opts = &room.CreateRoomRequest{
+			Name: name,
+		}
+	} else {
+		opts.Name = name
+	}
+
+	return s.roomManager.CreateRoom(opts, "system")
+}
+
+// DeleteRoom deletes a room by ID
+func (s *SDK) DeleteRoom(roomID string) error {
+	return s.roomManager.DeleteRoom(roomID)
+}
+
+// GetRoom retrieves a room by ID
+func (s *SDK) GetRoom(roomID string) (*room.Room, error) {
+	return s.roomManager.GetRoom(roomID)
+}
+
+// ListRooms returns all active rooms
+func (s *SDK) ListRooms() []*room.Room {
+	return s.roomManager.ListRooms()
+}
+
+// Event Callbacks
+
+// OnRoomCreated registers a callback for room creation events
+func (s *SDK) OnRoomCreated(callback func(*room.Room)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventRoomCreated, func(event *room.RoomEvent) {
+			if rm, ok := event.Data.(*room.Room); ok {
+				callback(rm)
+			}
+		})
+	}
+}
+
+// OnRoomDeleted registers a callback for room deletion events
+func (s *SDK) OnRoomDeleted(callback func(roomID string)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventRoomDeleted, func(event *room.RoomEvent) {
+			callback(event.RoomID)
+		})
+	}
+}
+
+// OnParticipantJoined registers a callback for participant join events
+func (s *SDK) OnParticipantJoined(callback func(roomID string, participant *room.Participant)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventParticipantJoined, func(event *room.RoomEvent) {
+			if p, ok := event.Data.(*room.Participant); ok {
+				callback(event.RoomID, p)
+			}
+		})
+	}
+}
+
+// OnParticipantLeft registers a callback for participant leave events
+func (s *SDK) OnParticipantLeft(callback func(roomID string, participantID string)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventParticipantLeft, func(event *room.RoomEvent) {
+			if p, ok := event.Data.(*room.Participant); ok {
+				callback(event.RoomID, p.ID)
+			}
+		})
+	}
+}
+
+// OnTrackPublished registers a callback for track publication events
+func (s *SDK) OnTrackPublished(callback func(roomID string, track *room.MediaTrack)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventTrackPublished, func(event *room.RoomEvent) {
+			if data, ok := event.Data.(map[string]interface{}); ok {
+				if track, ok := data["track"].(*room.MediaTrack); ok {
+					callback(event.RoomID, track)
+				}
+			}
+		})
+	}
+}
+
+// OnTrackUnpublished registers a callback for track unpublication events
+func (s *SDK) OnTrackUnpublished(callback func(roomID string, trackID string)) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventTrackUnpublished, func(event *room.RoomEvent) {
+			if data, ok := event.Data.(map[string]interface{}); ok {
+				if trackID, ok := data["track_id"].(string); ok {
+					callback(event.RoomID, trackID)
+				}
+			}
+		})
+	}
+}
+
+// OnMetadataUpdated registers a callback for metadata update events
+func (s *SDK) OnMetadataUpdated(callback func(roomID string, metadata map[string]interface{})) {
+	if s.roomManager != nil && s.roomManager.GetEventBus() != nil {
+		s.roomManager.GetEventBus().Subscribe(room.EventMetadataUpdated, func(event *room.RoomEvent) {
+			if metadata, ok := event.Data.(map[string]interface{}); ok {
+				callback(event.RoomID, metadata)
+			}
+		})
+	}
+}
+
 // Version returns the SDK version
 func (s *SDK) Version() string {
 	return "1.0.0"
