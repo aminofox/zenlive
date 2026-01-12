@@ -62,6 +62,16 @@ const (
 	ErrCodeValidationFailed ErrorCode = 9000
 	ErrCodeInvalidInput     ErrorCode = 9001
 	ErrCodeMissingParameter ErrorCode = 9002
+
+	// Room errors (10000-10999)
+	ErrCodeRoomNotFound        ErrorCode = 10000
+	ErrCodeParticipantNotFound ErrorCode = 10001
+	ErrCodeRoomLimitExceeded   ErrorCode = 10002
+	ErrCodeTrackLimitExceeded  ErrorCode = 10003
+	ErrCodeSessionNotFound     ErrorCode = 10004
+	ErrCodeInvalidState        ErrorCode = 10005
+	ErrCodeReconnectionTimeout ErrorCode = 10006
+	ErrCodeMaxAttemptsExceeded ErrorCode = 10007
 )
 
 // Error represents a custom error with code and message
@@ -167,4 +177,29 @@ func NewValidationError(message string) *Error {
 // NewNetworkError creates a new network error
 func NewNetworkError(message string, cause error) *Error {
 	return Wrap(ErrCodeNetworkError, message, cause)
+}
+
+// NewRoomNotFoundError creates a new room not found error
+func NewRoomNotFoundError(roomID string) *Error {
+	return New(ErrCodeRoomNotFound, fmt.Sprintf("room not found: %s", roomID))
+}
+
+// NewParticipantNotFoundError creates a new participant not found error
+func NewParticipantNotFoundError(participantID string) *Error {
+	return New(ErrCodeParticipantNotFound, fmt.Sprintf("participant not found: %s", participantID))
+}
+
+// NewSessionNotFoundError creates a new session not found error
+func NewSessionNotFoundError(userID string) *Error {
+	return New(ErrCodeSessionNotFound, fmt.Sprintf("session not found: %s", userID))
+}
+
+// NewRoomLimitExceededError creates a room limit exceeded error
+func NewRoomLimitExceededError(limit int) *Error {
+	return New(ErrCodeRoomLimitExceeded, fmt.Sprintf("room limit exceeded: max %d rooms", limit))
+}
+
+// NewTrackLimitExceededError creates a track limit exceeded error
+func NewTrackLimitExceededError(limit int) *Error {
+	return New(ErrCodeTrackLimitExceeded, fmt.Sprintf("track limit exceeded: max %d tracks", limit))
 }
