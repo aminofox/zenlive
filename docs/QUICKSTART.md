@@ -1,30 +1,94 @@
-# ZenLive Quick Start
+# ZenLive Quickstart Guide
 
-Integrate ZenLive SDK into your project in 5 minutes.
+Get started with ZenLive in less than 10 minutes! This guide will help you set up your first video conferencing room.
 
-## 📦 Installation
+## Table of Contents
+
+- [Installation](#installation)
+- [Basic Setup](#basic-setup)
+- [Create Your First Room](#create-your-first-room)
+- [Video Conference Example](#video-conference-example)
+- [WebSocket Client Example](#websocket-client-example)
+- [Next Steps](#next-steps)
+
+## Installation
+
+### Prerequisites
+
+- Go 1.23 or higher
+- Git
+
+### Install ZenLive
 
 ```bash
 go get github.com/aminofox/zenlive
 ```
 
-**Requirements:** Go 1.23+
+## Basic Setup
 
-## 🚀 3 Steps to Integration
+### 1. Minimal Server
 
-### Step 1: Create SDK Instance
+Create a file `main.go`:
 
 ```go
 package main
 
 import (
     "log"
+    
     "github.com/aminofox/zenlive"
     "github.com/aminofox/zenlive/pkg/config"
 )
 
 func main() {
-    // Create default config
+    // Create default configuration
+    cfg := config.DefaultConfig()
+    
+    // Create SDK instance
+    sdk, err := zenlive.New(cfg)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Start the SDK
+    if err := sdk.Start(); err != nil {
+        log.Fatal(err)
+    }
+    defer sdk.Stop()
+    
+    log.Println("ZenLive server started")
+    
+    // Keep running
+    select {}
+}
+```
+
+Run it:
+
+```bash
+go run main.go
+```
+
+That's it! Your ZenLive server is now running.
+
+### 2. Server with REST API
+
+To enable the REST API for room management:
+
+```go
+package main
+
+import (
+    "log"
+    
+    "github.com/aminofox/zenlive"
+    "github.com/aminofox/zenlive/pkg/api"
+    "github.com/aminofox/zenlive/pkg/auth"
+    "github.com/aminofox/zenlive/pkg/config"
+)
+
+func main() {
+    // Create configuration
     cfg := config.DefaultConfig()
     
     // Create SDK
@@ -32,371 +96,566 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-
+    
+    // Create JWT authenticator
+    jwtSecret := "your-secret-key-change-in-production"
+    jwtAuth := auth.NewJWTAuthenticator(jwtSecret)
+    
+    // Create API server
+    apiConfig := api.DefaultConfig()
+    apiConfig.JWTSecret = jwtSecret
+    
+    apiServer := api.NewServer(
+        sdk.GetRoomManager(),
+        jwtAuth,
+        apiConfig,
+    )
+    
     // Start SDK
     if err := sdk.Start(); err != nil {
         log.Fatal(err)
     }
     defer sdk.Stop()
-
-    log.Println("✅ ZenLive is running!")
-    select {} // Keep program running
-}
-```
-
-### Step 2: Publish Stream
-
-Use OBS or FFmpeg to stream:
-
-```bash
-# With FFmpeg
-ffmpeg -re -i video.mp4 -c copy -f flv rtmp://localhost:1935/live/mystream
-
-# With OBS Studio
-# Server: rtmp://localhost:1935/live
-# Stream Key: mystream
-```
-
-### Step 3: Watch Stream
-
-**On Web (HLS):**
-```html
-<video controls>
-    <source src="http://localhost:8080/live/mystream/index.m3u8" 
-            type="application/x-mpegURL">
-</video>
-```
-
-**With VLC or FFplay:**
-```bash
-ffplay rtmp://localhost:1935/live/mystream
-# or
-ffplay http://localhost:8080/live/mystream/index.m3u8
-```
-
-## 🎯 Common Use Cases
-
-### 1. Livestream Platform (like Twitch)
-
-```go
-cfg := config.DefaultConfig()
-
-// Enable streaming
-cfg.Streaming.EnableRTMP = true  // Receive from OBS
-cfg.Streaming.EnableHLS = true   // Deliver to viewers
-
-// Enable chat
-cfg.Chat.Enabled = true
-
-// Save recordings
-cfg.Storage.Type = "local"
-cfg.Storage.BasePath = "./recordings"
-
-sdk, _ := zenlive.New(cfg)
-sdk.Start()
-```
-
-### 2. Video Call 1-1 (like Zoom)
-
-```go
-cfg := config.DefaultConfig()
-
-// Only WebRTC needed
-cfg.Streaming.EnableRTMP = false
-cfg.Streaming.EnableHLS = false
-cfg.Streaming.EnableWebRTC = true
-
-// No chat, analytics, recording
-cfg.Chat.Enabled = false
-cfg.Analytics.Enabled = false
-
-sdk, _ := zenlive.New(cfg)
-sdk.Start()
-```
-
-### 3. Video Conference (Group)
-
-```go
-cfg := config.DefaultConfig()
-
-// WebRTC for low latency
-cfg.Streaming.EnableWebRTC = true
-cfg.Streaming.WebRTC.STUNServers = []string{
-    "stun:stun.l.google.com:19302",
-}
-
-// Optional: Chat
-cfg.Chat.Enabled = true
-
-sdk, _ := zenlive.New(cfg)
-sdk.Start()
-```
-
-## 🎨 Add Features
-
-### Add Authentication
-
-```go
-import "github.com/aminofox/zenlive/pkg/auth"
-
-// Create authenticator
-authenticator := auth.NewJWTAuthenticator(&auth.JWTConfig{
-    SecretKey: "your-secret-key-here",
-})
-
-// Generate token for publisher
-token, _ := authenticator.GenerateToken(&auth.User{
-    ID:    "user123",
-    Roles: []string{"publisher"},
-})
-
-// Use this token when publishing stream
-```
-
-### Add Chat
-
-```go
-import "github.com/aminofox/zenlive/pkg/chat"
-
-// Chat server starts automatically when cfg.Chat.Enabled = true
-chatServer := sdk.GetChatServer()
-
-// Create room for stream
-room := chatServer.CreateRoom("stream-123")
-
-// Send message
-room.Broadcast(&chat.Message{
-    UserID:  "user456",
-    Content: "Hello viewers!",
-})
-
-// Save chat to YOUR DATABASE
-chatServer.OnMessage(func(msg *chat.Message) {
-    // SDK broadcasts real-time
-    chatServer.Broadcast(msg)
     
-    // YOU save to database
-    myDB.SaveMessage(msg)
-})
-```
-
-### Add Recording
-
-```go
-cfg.Storage.Type = "local"  // or "s3"
-cfg.Storage.BasePath = "./recordings"
-
-// With S3
-cfg.Storage.Type = "s3"
-cfg.Storage.S3 = config.S3Config{
-    Region: "us-east-1",
-    Bucket: "my-streams",
-    AccessKeyID: os.Getenv("AWS_ACCESS_KEY"),
-    SecretAccessKey: os.Getenv("AWS_SECRET_KEY"),
+    // Start API server
+    log.Println("Starting API server on :8080")
+    if err := apiServer.Start(); err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 
-### Add Analytics
+Run it:
 
-```go
-cfg.Analytics.Enabled = true
-cfg.Analytics.EnablePrometheus = true
-cfg.Analytics.PrometheusPort = 9090
-
-// Access metrics at http://localhost:9090/metrics
+```bash
+go run main.go
 ```
 
-## 📊 Configuration Templates
+Your server now has:
+- REST API on `http://localhost:8080`
+- WebSocket signaling on `ws://localhost:8080/ws`
+- Health check on `http://localhost:8080/api/health`
 
-### Development (Simplest)
+## Create Your First Room
 
-```go
-cfg := config.DefaultConfig()
-cfg.Server.Port = 8080
-cfg.Logging.Level = "debug"
+### Using REST API
+
+#### 1. Create a Room
+
+```bash
+curl -X POST http://localhost:8080/api/rooms \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My First Room",
+    "max_participants": 10
+  }'
 ```
 
-### Production (Basic)
+Response:
 
-```go
-cfg := config.DefaultConfig()
-
-// Server
-cfg.Server.Port = 8080
-cfg.Server.MaxConnections = 10000
-
-// Auth
-cfg.Auth.JWTSecret = os.Getenv("JWT_SECRET")
-
-// Storage
-cfg.Storage.Type = "s3"
-cfg.Storage.S3.Region = "us-east-1"
-cfg.Storage.S3.Bucket = "my-streams"
-cfg.Storage.S3.AccessKeyID = os.Getenv("AWS_ACCESS_KEY")
-cfg.Storage.S3.SecretAccessKey = os.Getenv("AWS_SECRET_KEY")
-
-// Logging
-cfg.Logging.Level = "info"
-cfg.Logging.Format = "json"
+```json
+{
+  "id": "room_abc123",
+  "name": "My First Room",
+  "created_at": "2026-01-12T10:00:00Z",
+  "max_participants": 10,
+  "num_participants": 0
+}
 ```
 
-### Production (Full Features)
+#### 2. List Rooms
 
-```go
-cfg := config.DefaultConfig()
-
-// Streaming
-cfg.Streaming.EnableRTMP = true
-cfg.Streaming.EnableHLS = true
-cfg.Streaming.EnableWebRTC = true
-
-// Features
-cfg.Chat.Enabled = true
-cfg.Analytics.Enabled = true
-
-// Storage
-cfg.Storage.Type = "s3"
-
-// Logging
-cfg.Logging.Level = "info"
+```bash
+curl http://localhost:8080/api/rooms
 ```
 
-### Cluster (Multi-server)
+#### 3. Get Room Details
 
-```go
-cfg := config.DefaultConfig()
-
-// Cluster mode
-cfg.Cluster.Enabled = true
-cfg.Cluster.NodeID = "node-1"  // Unique per server
-
-// Redis (REQUIRED when cluster enabled)
-cfg.Redis.Enabled = true
-cfg.Redis.Host = "redis.example.com"
-cfg.Redis.Port = 6379
-
-// Shared storage
-cfg.Storage.Type = "s3"
+```bash
+curl http://localhost:8080/api/rooms/room_abc123
 ```
 
-## ⚠️ Important Notes
+#### 4. Generate Access Token
 
-### 1. SDK Does NOT Manage Database
+```bash
+curl -X POST http://localhost:8080/api/rooms/room_abc123/tokens \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user_123",
+    "username": "John Doe",
+    "role": "host"
+  }'
+```
 
-**SDK only does:** Real-time delivery (streaming, chat)
-**YOU must do:** Save data to database (chat history, user info, stream metadata)
+Response:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "participant_id": "participant_xyz789"
+}
+```
+
+### Using SDK Directly
 
 ```go
-// ❌ WRONG - Expecting SDK to save chat
-cfg.Chat.EnablePersistence = true  // Just in-memory buffer!
+package main
 
-// ✅ CORRECT - You save to database
-chatServer.OnMessage(func(msg *chat.Message) {
-    myDB.Exec("INSERT INTO messages ...")  // YOU do this
+import (
+    "log"
+    "time"
+    
+    "github.com/aminofox/zenlive"
+    "github.com/aminofox/zenlive/pkg/config"
+    "github.com/aminofox/zenlive/pkg/room"
+)
+
+func main() {
+    cfg := config.DefaultConfig()
+    sdk, _ := zenlive.New(cfg)
+    sdk.Start()
+    defer sdk.Stop()
+    
+    // Get room manager
+    roomMgr := sdk.GetRoomManager()
+    
+    // Create a room
+    newRoom, err := roomMgr.CreateRoom(&room.CreateRoomRequest{
+        Name:            "My Video Room",
+        MaxParticipants: 10,
+        EmptyTimeout:    5 * time.Minute,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    log.Printf("Room created: %s (ID: %s)", newRoom.Name, newRoom.ID)
+    
+    // Add participant
+    participant, err := newRoom.AddParticipant(&room.Participant{
+        UserID:   "user_123",
+        Username: "John Doe",
+        Role:     room.RoleHost,
+    }, "")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    log.Printf("Participant joined: %s", participant.Username)
+    
+    // List participants
+    participants := newRoom.ListParticipants()
+    log.Printf("Total participants: %d", len(participants))
+    
+    select {}
+}
+```
+
+## Video Conference Example
+
+Complete example of a video conference server:
+
+```go
+package main
+
+import (
+    "log"
+    "time"
+    
+    "github.com/aminofox/zenlive"
+    "github.com/aminofox/zenlive/pkg/api"
+    "github.com/aminofox/zenlive/pkg/auth"
+    "github.com/aminofox/zenlive/pkg/config"
+    "github.com/aminofox/zenlive/pkg/logger"
+    "github.com/aminofox/zenlive/pkg/room"
+)
+
+func main() {
+    // Setup configuration
+    cfg := config.DefaultConfig()
+    cfg.Logging.Level = "debug"
+    
+    // Create SDK
+    sdk, err := zenlive.New(cfg)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Setup authentication
+    jwtSecret := "my-super-secret-key"
+    jwtAuth := auth.NewJWTAuthenticator(jwtSecret)
+    
+    // Setup API server
+    apiConfig := api.DefaultConfig()
+    apiConfig.Addr = ":8080"
+    apiConfig.JWTSecret = jwtSecret
+    
+    apiServer := api.NewServer(
+        sdk.GetRoomManager(),
+        jwtAuth,
+        apiConfig,
+    )
+    
+    // Setup event callbacks
+    roomMgr := sdk.GetRoomManager()
+    
+    roomMgr.OnRoomCreated(func(r *room.Room) {
+        log.Printf("[EVENT] Room created: %s (ID: %s)", r.Name, r.ID)
+    })
+    
+    roomMgr.OnRoomDeleted(func(roomID string) {
+        log.Printf("[EVENT] Room deleted: %s", roomID)
+    })
+    
+    roomMgr.OnParticipantJoined(func(roomID string, p *room.Participant) {
+        log.Printf("[EVENT] Participant joined room %s: %s", roomID, p.Username)
+    })
+    
+    roomMgr.OnParticipantLeft(func(roomID, participantID string) {
+        log.Printf("[EVENT] Participant left room %s: %s", roomID, participantID)
+    })
+    
+    roomMgr.OnTrackPublished(func(roomID, participantID, trackID string) {
+        log.Printf("[EVENT] Track published in room %s by %s: %s", 
+            roomID, participantID, trackID)
+    })
+    
+    // Start SDK
+    if err := sdk.Start(); err != nil {
+        log.Fatal(err)
+    }
+    defer sdk.Stop()
+    
+    // Create demo rooms
+    createDemoRooms(roomMgr)
+    
+    // Start API server
+    log.Printf("🚀 ZenLive Video Conference Server started")
+    log.Printf("📡 REST API: http://localhost:8080")
+    log.Printf("🔌 WebSocket: ws://localhost:8080/ws")
+    log.Printf("❤️  Health: http://localhost:8080/api/health")
+    
+    if err := apiServer.Start(); err != nil {
+        log.Fatal(err)
+    }
+}
+
+func createDemoRooms(roomMgr *room.RoomManager) {
+    rooms := []struct {
+        name string
+        max  int
+    }{
+        {"Team Standup", 10},
+        {"Product Demo", 50},
+        {"All Hands Meeting", 100},
+    }
+    
+    for _, r := range rooms {
+        room, err := roomMgr.CreateRoom(&room.CreateRoomRequest{
+            Name:            r.name,
+            MaxParticipants: r.max,
+            EmptyTimeout:    10 * time.Minute,
+        })
+        if err != nil {
+            log.Printf("Failed to create room %s: %v", r.name, err)
+            continue
+        }
+        log.Printf("✓ Created demo room: %s (ID: %s)", room.Name, room.ID)
+    }
+}
+```
+
+Save as `server.go` and run:
+
+```bash
+go run server.go
+```
+
+## WebSocket Client Example
+
+Connect to a room via WebSocket:
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "log"
+    "net/url"
+    "os"
+    "os/signal"
+    "time"
+    
+    "github.com/gorilla/websocket"
+)
+
+type WSMessage struct {
+    Type   string          `json:"type"`
+    RoomID string          `json:"room_id,omitempty"`
+    Data   json.RawMessage `json:"data,omitempty"`
+}
+
+func main() {
+    // Get token (from REST API)
+    token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    
+    // Connect to WebSocket
+    u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"}
+    headers := map[string][]string{
+        "Authorization": {token},
+    }
+    
+    conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer conn.Close()
+    
+    log.Println("Connected to WebSocket")
+    
+    // Handle incoming messages
+    done := make(chan struct{})
+    
+    go func() {
+        defer close(done)
+        for {
+            var msg WSMessage
+            err := conn.ReadJSON(&msg)
+            if err != nil {
+                log.Println("Read error:", err)
+                return
+            }
+            log.Printf("Received: %s - %s", msg.Type, string(msg.Data))
+        }
+    }()
+    
+    // Join room
+    joinMsg := WSMessage{
+        Type:   "join_room",
+        RoomID: "room_abc123",
+    }
+    if err := conn.WriteJSON(joinMsg); err != nil {
+        log.Fatal(err)
+    }
+    log.Println("Sent: join_room")
+    
+    // Publish track
+    time.Sleep(1 * time.Second)
+    publishMsg := WSMessage{
+        Type: "publish_track",
+        Data: json.RawMessage(`{
+            "track_id": "track_123",
+            "kind": "video",
+            "source": "camera"
+        }`),
+    }
+    if err := conn.WriteJSON(publishMsg); err != nil {
+        log.Fatal(err)
+    }
+    log.Println("Sent: publish_track")
+    
+    // Wait for interrupt signal
+    interrupt := make(chan os.Signal, 1)
+    signal.Notify(interrupt, os.Interrupt)
+    
+    <-interrupt
+    log.Println("Closing connection...")
+}
+```
+
+## Testing Your Setup
+
+### 1. Health Check
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-12T10:00:00Z"
+}
+```
+
+### 2. Create Room and Join
+
+```bash
+# Create room
+ROOM_RESPONSE=$(curl -s -X POST http://localhost:8080/api/rooms \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Room"}')
+
+ROOM_ID=$(echo $ROOM_RESPONSE | jq -r '.id')
+echo "Room ID: $ROOM_ID"
+
+# Generate token
+TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8080/api/rooms/$ROOM_ID/tokens \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user_123", "username": "Test User", "role": "host"}')
+
+TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.token')
+echo "Access Token: $TOKEN"
+
+# Get room details
+curl http://localhost:8080/api/rooms/$ROOM_ID
+```
+
+### 3. WebSocket Test (using wscat)
+
+Install wscat:
+
+```bash
+npm install -g wscat
+```
+
+Connect to WebSocket:
+
+```bash
+# Replace TOKEN with your JWT token
+wscat -c "ws://localhost:8080/ws" -H "Authorization: Bearer TOKEN"
+```
+
+Send messages:
+
+```json
+# Join room
+{"type": "join_room", "room_id": "room_abc123"}
+
+# Publish track
+{"type": "publish_track", "data": {"track_id": "track_123", "kind": "video", "source": "camera"}}
+
+# Leave room
+{"type": "leave_room", "room_id": "room_abc123"}
+```
+
+## Configuration Options
+
+Customize your server configuration:
+
+```go
+cfg := &config.Config{
+    Server: config.ServerConfig{
+        Host: "0.0.0.0",
+        Port: 8080,
+    },
+    Logging: config.LoggingConfig{
+        Level:  "info",   // debug, info, warn, error
+        Format: "json",   // json, text
+    },
+}
+```
+
+## Common Use Cases
+
+### 1. Video Call (1-on-1)
+
+```go
+room, _ := roomMgr.CreateRoom(&room.CreateRoomRequest{
+    Name:            "Private Call",
+    MaxParticipants: 2,
 })
 ```
 
-### 2. Redis Only for Cluster Mode
+### 2. Video Conference (Team Meeting)
 
 ```go
-// ❌ WRONG - Single server doesn't need Redis
-cfg.Cluster.Enabled = false
-cfg.Redis.Enabled = true  // Waste!
-
-// ✅ CORRECT - Redis only when cluster
-cfg.Cluster.Enabled = true
-cfg.Redis.Enabled = true  // Required
+room, _ := roomMgr.CreateRoom(&room.CreateRoomRequest{
+    Name:            "Team Meeting",
+    MaxParticipants: 10,
+})
 ```
 
-### 3. Chat is Optional
+### 3. Webinar (One Speaker, Many Viewers)
 
 ```go
-// Livestream - with chat
-cfg.Chat.Enabled = true
+room, _ := roomMgr.CreateRoom(&room.CreateRoomRequest{
+    Name:            "Company Webinar",
+    MaxParticipants: 1000,
+})
 
-// Video call - no chat needed
-cfg.Chat.Enabled = false
+// Host can publish
+hostParticipant := &room.Participant{
+    Role: room.RoleHost,
+}
+
+// Attendees can only watch
+attendeeParticipant := &room.Participant{
+    Role: room.RoleAttendee, // Cannot publish
+}
 ```
 
-## 📁 Project Structure
+## Troubleshooting
+
+### Server won't start
+
+**Problem:** Port already in use
 
 ```
-myapp/
-├── main.go                 # Entry point
-├── go.mod
-├── handlers/
-│   ├── stream.go          # Stream logic
-│   └── chat.go            # Chat logic (if needed)
-├── database/
-│   └── db.go              # YOUR DATABASE
-└── recordings/            # If using local storage
+panic: listen tcp :8080: bind: address already in use
 ```
 
-## 🔧 Troubleshooting
-
-### Port already in use
-
-```bash
-# Check port
-lsof -i :1935  # RTMP
-lsof -i :8080  # HTTP/HLS
-
-# Kill process
-kill -9 <PID>
-```
-
-### Stream not showing
-
-```bash
-# Check logs
-cfg.Logging.Level = "debug"
-
-# Check if stream is publishing
-curl http://localhost:8080/api/streams
-```
-
-### Out of memory
+**Solution:** Change the port
 
 ```go
-// Reduce max connections
-cfg.Server.MaxConnections = 1000
-
-// Reduce HLS playlist size
-cfg.Streaming.HLS.PlaylistLength = 3
+apiConfig.Addr = ":8081"
 ```
 
-## 📚 Next Steps
+### Cannot create room
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Understand how SDK works
-- **[Examples](../examples/)** - See 11+ complete examples
-- **[Config Examples](../examples/config/)** - Configuration templates
+**Problem:** Missing room name
 
-## 💡 Best Practices
+**Solution:** Always provide a room name
 
-1. **Start simple** - Use `DefaultConfig()`, add features gradually
-2. **Use environment variables** - For secrets (JWT, AWS keys)
-3. **Production logging** - `level: "info"`, `format: "json"`
-4. **S3 for production** - Local storage only for dev/test
-5. **Test configuration** - Before deployment
+```go
+roomMgr.CreateRoom(&room.CreateRoomRequest{
+    Name: "My Room", // Required!
+})
+```
 
-## ❓ FAQ
+### WebSocket connection refused
 
-**Q: Does SDK have built-in database?**  
-A: No. You manage your own database.
+**Problem:** Not using correct authentication
 
-**Q: Where is chat history stored?**  
-A: SDK only broadcasts real-time. YOU save to YOUR database.
+**Solution:** Include JWT token in Authorization header
 
-**Q: When do I need Redis?**  
-A: Only when `Cluster.Enabled = true` (multi-server).
+```go
+headers := map[string][]string{
+    "Authorization": {"Bearer " + token},
+}
+```
 
-**Q: Can I use MongoDB/PostgreSQL?**  
-A: Yes! Use any database - SDK doesn't care.
+## Next Steps
 
-**Q: Is chat required?**  
-A: No. Disable with `Chat.Enabled = false` for video calls.
+Now that you have a working ZenLive server, explore more features:
 
-## 🆘 Support
+1. **[Architecture Guide](architecture.md)** - Understand how ZenLive works
+2. **[Examples Directory](../examples/)** - Browse working code examples
+3. **[API Reference](api-reference.md)** - Complete API documentation
+4. **[Deployment Guide](deployment.md)** - Deploy to production
 
-- **Issues**: [github.com/aminofox/zenlive/issues](https://github.com/aminofox/zenlive/issues)
-- **Examples**: [github.com/aminofox/zenlive/examples](https://github.com/aminofox/zenlive/tree/main/examples)
+### Recommended Examples
+
+- [examples/room/](../examples/room/) - Basic room management
+- [examples/video-conference/](../examples/video-conference/) - Full video conference server
+- [examples/websocket/](../examples/websocket/) - WebSocket client example
+- [examples/api/](../examples/api/) - REST API examples
+
+## Getting Help
+
+- **Documentation**: Check the [docs/](.) folder
+- **Examples**: Browse [examples/](../examples/)
+- **Issues**: Report bugs on GitHub
+- **Community**: Join our discussions
+
+## What's Next?
+
+- Add recording functionality
+- Enable RTMP streaming
+- Setup clustering for scale
+- Build a web client (JavaScript SDK)
+- Mobile apps (iOS/Android SDKs)
+
+Happy coding! 🚀
