@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// ErrCacheMiss is returned when a key is not found in cache
+var ErrCacheMiss = errors.New("cache miss")
+
 // CacheEntry represents a cache entry
 type CacheEntry struct {
 	Key         string      // Cache key

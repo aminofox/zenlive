@@ -107,6 +107,20 @@ func (rm *RoomManager) GetRoom(roomID string) (*Room, error) {
 	return room, nil
 }
 
+// GetRoomByName returns a room by name
+func (rm *RoomManager) GetRoomByName(roomName string) (*Room, error) {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+
+	for _, room := range rm.rooms {
+		if room.Name == roomName {
+			return room, nil
+		}
+	}
+
+	return nil, ErrRoomNotFound
+}
+
 // ListRooms returns all active rooms
 func (rm *RoomManager) ListRooms() []*Room {
 	rm.mu.RLock()

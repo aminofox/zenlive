@@ -1,10 +1,11 @@
-.PHONY: help build test clean fmt vet run-example coverage
+.PHONY: help build test clean fmt vet run-example coverage server
 
 # Default target
 help:
 	@echo "ZenLive SDK - Makefile Commands"
 	@echo "================================"
 	@echo "make build        - Build all packages"
+	@echo "make server       - Build server binary"
 	@echo "make test         - Run tests"
 	@echo "make coverage     - Run tests with coverage"
 	@echo "make fmt          - Format code with gofmt"
@@ -18,6 +19,13 @@ build:
 	@echo "Building ZenLive SDK..."
 	@go build ./...
 	@echo "Build complete!"
+
+# Build server binary
+server:
+	@echo "Building ZenLive server..."
+	@mkdir -p bin
+	@go build -o bin/zenlive-server ./cmd/zenlive-server
+	@echo "Server binary created at: bin/zenlive-server"
 
 # Run tests
 test:

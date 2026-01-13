@@ -282,3 +282,66 @@ func (j *JWTAuthenticator) sign(message string) string {
 	h.Write([]byte(message))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
+
+// generateJWT generates a JWT token from AccessTokenClaims using a secret key
+func generateJWT(claims *AccessTokenClaims, secret string) (string, error) {
+	// Create header
+	header := map[string]string{
+		"alg": "HS256",
+		"typ": "JWT",
+	}
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+	headerEncoded := base64.RawURLEncoding.EncodeToString(headerJSON)
+
+	// Create payload
+	payloadJSON, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	payloadEncoded := base64.RawURLEncoding.EncodeToString(payloadJSON)
+
+	// Create signature
+	message := headerEncoded + "." + payloadEncoded
+	signature := signWithSecret(message, secret)
+
+	return message + "." + signature, nil
+}
+
+// parseJWT parses and validates a JWT token
+func parseJWT(token, secret string) (*AccessTokenClaims, error) {
+	// Split token into parts
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid token format")
+	}
+
+	// Verify signature
+	message := parts[0] + "." + parts[1]
+	expectedSignature := signWithSecret(message, secret)
+	if parts[2] != expectedSignature {
+		return nil, fmt.Errorf("invalid token signature")
+	}
+
+	// Decode payload
+	payloadJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode payload: %w", err)
+	}
+
+	var claims AccessTokenClaims
+	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+
+	return &claims, nil
+}
+
+// signWithSecret creates a HMAC-SHA256 signature with a given secret
+func signWithSecret(message, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(message))
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+}

@@ -24,6 +24,14 @@ type Participant struct {
 	// Metadata contains custom participant data
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 
+	// Token-based permissions (from access token)
+	CanPublish     bool `json:"can_publish"`
+	CanSubscribe   bool `json:"can_subscribe"`
+	CanPublishData bool `json:"can_publish_data"`
+	IsAdmin        bool `json:"is_admin"`
+	IsHidden       bool `json:"is_hidden"`
+	IsRecorder     bool `json:"is_recorder"`
+
 	// tracks stores published tracks by track ID
 	tracks map[string]*MediaTrack
 	// mu protects concurrent access

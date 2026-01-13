@@ -67,16 +67,17 @@ func (rs *RoomSFU) startCleanup() {
 // PublishTrack publishes a media track for a participant
 func (rs *RoomSFU) PublishTrack(participantID, trackID, kind, label string) (string, error) {
 	rs.mu.Lock()
-	defer rs.mu.Unlock()
 
 	// Verify participant exists in room
 	participant, err := rs.room.GetParticipant(participantID)
 	if err != nil {
+		rs.mu.Unlock()
 		return "", err
 	}
 
-	// Check if participant has permission to publish
-	if !participant.Permissions.CanPublish {
+	// Check if participant has permission to publish (use token-based permission)
+	if !participant.CanPublish {
+		rs.mu.Unlock()
 		return "", errors.New(errors.ErrCodeUnauthorized, "participant does not have permission to publish")
 	}
 
@@ -89,6 +90,7 @@ func (rs *RoomSFU) PublishTrack(participantID, trackID, kind, label string) (str
 	}
 
 	rs.tracks[trackID] = track
+	rs.mu.Unlock()
 
 	rs.logger.Info("Track published",
 		logger.String("room_id", rs.room.ID),
@@ -97,7 +99,7 @@ func (rs *RoomSFU) PublishTrack(participantID, trackID, kind, label string) (str
 		logger.String("kind", kind),
 	)
 
-	// Auto-subscribe other participants to this track
+	// Auto-subscribe other participants to this track (without holding lock)
 	rs.autoSubscribeToNewTrack(participantID, trackID)
 
 	return trackID, nil
@@ -161,7 +163,7 @@ func (rs *RoomSFU) autoSubscribeToNewTrack(publisherID, trackID string) {
 		}
 
 		// Check if participant has permission to subscribe
-		if !participant.Permissions.CanSubscribe {
+		if !participant.CanSubscribe {
 			continue
 		}
 
@@ -180,8 +182,8 @@ func (rs *RoomSFU) autoSubscribeToExistingTracks(participantID string) {
 		return
 	}
 
-	// Check if participant has permission to subscribe
-	if !participant.Permissions.CanSubscribe {
+	// Check if participant has permission to subscribe (use token-based permission)
+	if !participant.CanSubscribe {
 		return
 	}
 

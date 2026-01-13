@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  zenlive:
+    build: .
+    container_name: zenlive-server
+    ports:
+      - "7880:7880" # HTTP API
+      - "7881:7881" # WebRTC
+      - "9090:9090" # Metrics (optional)
+    environment:
+      - ZENLIVE_API_KEY=${ZENLIVE_API_KEY}
+      - ZENLIVE_SECRET_KEY=${ZENLIVE_SECRET_KEY}
+      - REDIS_URL=redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./recordings:/app/recordings
+    networks:
+      - zenlive-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: zenlive-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - zenlive-network
+    restart: unless-stopped
+
+networks:
+  zenlive-network:
+    driver: bridge
+
+volumes:
+  redis-data:

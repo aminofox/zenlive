@@ -1,7 +1,11 @@
 package config
 
 import (
+	"fmt"
+	"os"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config represents the main configuration for the ZenLive SDK
@@ -37,34 +41,46 @@ type Config struct {
 // ServerConfig holds server-related configuration
 type ServerConfig struct {
 	// Host is the server host address
-	Host string `json:"host"`
+	Host string `json:"host" yaml:"host"`
 
 	// Port is the server port
-	Port int `json:"port"`
+	Port int `json:"port" yaml:"port"`
+
+	// SignalingPort is the WebRTC signaling port
+	SignalingPort int `json:"signaling_port" yaml:"signaling_port"`
 
 	// ReadTimeout is the maximum duration for reading the entire request
-	ReadTimeout time.Duration `json:"read_timeout"`
+	ReadTimeout time.Duration `json:"read_timeout" yaml:"read_timeout"`
 
 	// WriteTimeout is the maximum duration before timing out writes
-	WriteTimeout time.Duration `json:"write_timeout"`
+	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 
 	// MaxConnections is the maximum number of concurrent connections
-	MaxConnections int `json:"max_connections"`
+	MaxConnections int `json:"max_connections" yaml:"max_connections"`
+
+	// DevMode enables development mode
+	DevMode bool `json:"dev_mode" yaml:"dev_mode"`
 }
 
 // AuthConfig holds authentication-related configuration
 type AuthConfig struct {
 	// JWTSecret is the secret key for JWT tokens
-	JWTSecret string `json:"jwt_secret"`
+	JWTSecret string `json:"jwt_secret" yaml:"jwt_secret"`
 
 	// TokenExpiration is the duration before tokens expire
-	TokenExpiration time.Duration `json:"token_expiration"`
+	TokenExpiration time.Duration `json:"token_expiration" yaml:"token_expiration"`
 
 	// RefreshTokenExpiration is the duration before refresh tokens expire
-	RefreshTokenExpiration time.Duration `json:"refresh_token_expiration"`
+	RefreshTokenExpiration time.Duration `json:"refresh_token_expiration" yaml:"refresh_token_expiration"`
 
 	// EnableRBAC enables role-based access control
-	EnableRBAC bool `json:"enable_rbac"`
+	EnableRBAC bool `json:"enable_rbac" yaml:"enable_rbac"`
+
+	// DefaultAPIKey is the default API key for development
+	DefaultAPIKey string `json:"default_api_key" yaml:"default_api_key"`
+
+	// DefaultSecretKey is the default secret key for development
+	DefaultSecretKey string `json:"default_secret_key" yaml:"default_secret_key"`
 }
 
 // StorageConfig holds storage-related configuration
@@ -217,28 +233,31 @@ type ClusterConfig struct {
 type RedisConfig struct {
 	// Enabled enables Redis for distributed sessions
 	// Must be true when Cluster.Enabled = true
-	Enabled bool `json:"enabled"`
+	Enabled bool `json:"enabled" yaml:"enabled"`
+
+	// Address is the Redis server address (host:port)
+	Address string `json:"address" yaml:"address"`
 
 	// Host is the Redis server host
-	Host string `json:"host"`
+	Host string `json:"host" yaml:"host"`
 
 	// Port is the Redis server port
-	Port int `json:"port"`
+	Port int `json:"port" yaml:"port"`
 
 	// Password is the Redis password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" yaml:"password"`
 
 	// DB is the Redis database number
-	DB int `json:"db"`
+	DB int `json:"db" yaml:"db"`
 
 	// PoolSize is the maximum number of connections
-	PoolSize int `json:"pool_size"`
+	PoolSize int `json:"pool_size" yaml:"pool_size"`
 
 	// MaxRetries is the maximum number of retries
-	MaxRetries int `json:"max_retries"`
+	MaxRetries int `json:"max_retries" yaml:"max_retries"`
 
 	// SessionTTL is the session time-to-live duration
-	SessionTTL time.Duration `json:"session_ttl"`
+	SessionTTL time.Duration `json:"session_ttl" yaml:"session_ttl"`
 }
 
 // LoggingConfig holds logging-related configuration
@@ -258,16 +277,20 @@ func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
 			Host:           "0.0.0.0",
-			Port:           8080,
+			Port:           7880,
+			SignalingPort:  7881,
 			ReadTimeout:    30 * time.Second,
 			WriteTimeout:   30 * time.Second,
 			MaxConnections: 10000,
+			DevMode:        false,
 		},
 		Auth: AuthConfig{
 			JWTSecret:              "change-me-in-production",
 			TokenExpiration:        24 * time.Hour,
 			RefreshTokenExpiration: 7 * 24 * time.Hour,
 			EnableRBAC:             true,
+			DefaultAPIKey:          "",
+			DefaultSecretKey:       "",
 		},
 		Storage: StorageConfig{
 			Type:     "local",
@@ -312,6 +335,7 @@ func DefaultConfig() *Config {
 		},
 		Redis: RedisConfig{
 			Enabled:    false, // Only needed for cluster mode
+			Address:    "localhost:6379",
 			Host:       "localhost",
 			Port:       6379,
 			Password:   "",
@@ -325,5 +349,37 @@ func DefaultConfig() *Config {
 			Format:     "json",
 			OutputPath: "stdout",
 		},
+	}
+}
+
+// Load loads configuration from a YAML file
+func Load(filename string) (*Config, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	cfg := DefaultConfig()
+
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Override from environment variables
+	cfg.loadFromEnv()
+
+	return cfg, nil
+}
+
+// loadFromEnv overrides config from environment variables
+func (c *Config) loadFromEnv() {
+	if host := os.Getenv("ZENLIVE_HOST"); host != "" {
+		c.Server.Host = host
+	}
+	if redisAddr := os.Getenv("REDIS_URL"); redisAddr != "" {
+		c.Redis.Host = redisAddr
+	}
+	if redisPass := os.Getenv("REDIS_PASSWORD"); redisPass != "" {
+		c.Redis.Password = redisPass
 	}
 }
