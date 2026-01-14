@@ -1,53 +1,385 @@
-# ZenLive - Go Live Streaming SDK
+# ZenLive
 
-[![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aminofox/zenlive)](https://goreportcard.com/report/github.com/aminofox/zenlive)
-[![GoDoc](https://godoc.org/github.com/aminofox/zenlive?status.svg)](https://godoc.org/github.com/aminofox/zenlive)
+[![Docker Pulls](https://img.shields.io/docker/pulls/aminofox/zenlive)](https://hub.docker.com/r/aminofox/zenlive)
 
-Production-ready Go SDK for building live streaming platforms. Similar to LiveKit and Agora, ZenLive provides RTMP, HLS, WebRTC streaming with real-time chat, recording, and analytics.
+Production-ready WebRTC SFU server for live streaming and video conferencing. Built with Go, similar to LiveKit architecture.
 
-## 🚀 Quick Start (5 Minutes)
+## Features
 
-### 1. Install
+- **WebRTC SFU** - Selective Forwarding Unit for efficient media streaming
+- **API Key Authentication** - Secure token-based room access like LiveKit
+- **Multi-Protocol** - RTMP, HLS, WebRTC support
+- **Real-time Communication** - Video calls, live streaming, screen sharing
+- **Redis Integration** - Horizontal scaling with distributed session management
+- **Docker Ready** - Deploy with Docker or Docker Compose
+- **Go SDK** - Build custom streaming applications
+
+---
+
+## Quick Start
+
+### 1. Run with Docker
 
 ```bash
-go get github.com/aminofox/zenlive
+# Pull image
+docker pull aminofox/zenlive:latest
+
+# Run server
+docker run -d --name zenlive -p 7880:7880 -p 7881:7881 aminofox/zenlive:latest
+
+# Health check
+curl http://localhost:7880/api/health
 ```
 
-### 2. Create Server
+### 2. Use Docker Compose
+
+```bash
+git clone https://github.com/aminofox/zenlive.git
+cd zenlive
+docker-compose up -d
+```
+
+### 3. Build from Source
+
+```bash
+# Clone and build
+git clone https://github.com/aminofox/zenlive.git
+cd zenlive
+make server
+
+# Run
+./bin/zenlive-server --config config.yaml --dev
+```
+
+---
+
+## SDK Usage
+
+### Generate API Keys
 
 ```go
 package main
 
 import (
-    "github.com/aminofox/zenlive"
-    "github.com/aminofox/zenlive/pkg/config"
+    "context"
+    "time"
+    "github.com/aminofox/zenlive/pkg/auth"
 )
 
 func main() {
-    cfg := config.DefaultConfig()
-    sdk, _ := zenlive.New(cfg)
-    sdk.Start()
-    defer sdk.Stop()
+    ctx := context.Background()
+    store := auth.NewMemoryAPIKeyStore()
+    manager := auth.NewAPIKeyManager(store)
     
-    select {} // Keep running
+    expiresIn := 365 * 24 * time.Hour
+    key, _ := manager.GenerateAPIKey(ctx, "My App", &expiresIn, nil)
+    
+    println("API Key:", key.AccessKey)
+    println("Secret:", key.SecretKey)
 }
 ```
 
-### 3. Stream & Watch
+### Create Room Token
 
-```bash
-# Publish with OBS or FFmpeg
-ffmpeg -re -i video.mp4 -c copy -f flv rtmp://localhost:1935/live/mystream
+```go
+package main
 
-# Watch in browser
-open http://localhost:8080/live/mystream/index.m3u8
+import (
+    "time"
+    "github.com/aminofox/zenlive/pkg/auth"
+)
+
+func main() {
+    apiKey := "your-api-key"
+    secretKey := "your-secret-key"
+    
+    token, _ := auth.NewAccessTokenBuilder(apiKey, secretKey).
+        SetIdentity("user123").
+        SetName("John Doe").
+        SetRoomJoin("my-room").
+        SetCanPublish(true).
+        SetCanSubscribe(true).
+        SetValidFor(24 * time.Hour).
+        Build()
+    
+    println("Room Token:", token)
+}
 ```
 
-**That's it!** Your streaming server is running.
+### Join Room
 
-📖 **[Full Documentation →](docs/QUICKSTART.md)**
+```go
+package main
+
+import (
+    "context"
+    "github.com/aminofox/zenlive/pkg/logger"
+    "github.com/aminofox/zenlive/pkg/room"
+)
+
+func main() {
+    ctx := context.Background()
+    log := logger.NewDefaultLogger(logger.InfoLevel, "text")
+    
+    roomMgr := room.NewRoomManager(log)
+    token := "your-room-token"
+    
+    participant, _ := room.JoinRoomWithToken(ctx, "my-room", token, roomMgr, log)
+    
+    println("Joined room as:", participant.ID)
+}
+```
+
+---
+
+## Configuration
+
+Create `config.yaml`:
+
+```yaml
+server:
+  host: 0.0.0.0
+  port: 7880
+  signaling_port: 7881
+  dev_mode: false
+
+auth:
+  jwt_secret: "your-secret-key"
+  default_api_key: ""
+  default_secret_key: ""
+
+redis:
+  enabled: false
+  address: "localhost:6379"
+  password: ""
+  db: 0
+
+webrtc:
+  stun_servers:
+    - "stun:stun.l.google.com:19302"
+```
+
+Environment variables:
+
+```bash
+ZENLIVE_HOST=0.0.0.0
+ZENLIVE_PORT=7880
+JWT_SECRET=your-secret
+REDIS_URL=redis:6379
+REDIS_PASSWORD=
+```
+
+---
+
+## Docker Deployment
+
+### Standalone
+
+```bash
+docker run -d \
+  --name zenlive \
+  -p 7880:7880 \
+  -p 7881:7881 \
+  -e JWT_SECRET=my-secret \
+  aminofox/zenlive:latest
+```
+
+### With Redis
+
+```yaml
+version: '3.8'
+services:
+  zenlive:
+    image: aminofox/zenlive:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis:6379
+    depends_on:
+      - redis
+  
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+```
+
+### Custom Config
+
+```bash
+docker run -d \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  -p 7880:7880 \
+  aminofox/zenlive:latest \
+  --config /app/config.yaml
+```
+
+---
+
+## Development
+
+### Build
+
+```bash
+# Build SDK packages
+make build
+
+# Build server binary
+make server
+
+# Build Docker image
+make docker
+
+# Run tests
+make test
+```
+
+### Examples
+
+```bash
+# API key generation
+go run examples/apikey/main.go
+
+# Room authentication
+go run examples/room-auth/main.go
+
+# Video call with media
+go run examples/video-call-media/main.go
+```
+
+### Project Structure
+
+```
+zenlive/
+├── cmd/
+│   └── zenlive-server/      # Server binary
+├── pkg/
+│   ├── api/                 # REST API server
+│   ├── auth/                # Authentication & tokens
+│   ├── room/                # Room management
+│   ├── streaming/           # WebRTC, HLS, RTMP
+│   ├── storage/             # Recording & storage
+│   └── ...
+├── examples/                # SDK examples
+├── docs/                    # Documentation
+└── config.yaml              # Configuration
+```
+
+---
+
+## Architecture
+
+```
+┌──────────────┐         ┌──────────────────┐         ┌─────────┐
+│  Client App  │         │  ZenLive Server  │         │  Redis  │
+│  (Go SDK)    │────────▶│  (Docker)        │────────▶│ (Cache) │
+└──────────────┘  Token  └──────────────────┘         └─────────┘
+                                  │
+                                  ▼
+                         ┌────────────────┐
+                         │  WebRTC SFU    │
+                         │ (Media Stream) │
+                         └────────────────┘
+```
+
+**Components:**
+
+- **API Server** (port 7880) - HTTP REST API for room management
+- **WebRTC Signaling** (port 7881) - WebSocket for WebRTC negotiation
+- **Room Manager** - Handles video call rooms and participants
+- **API Key Manager** - Authentication with API key/secret pairs
+- **Redis** (optional) - Session management for horizontal scaling
+
+---
+
+## API Endpoints
+
+- `GET /api/health` - Health check
+- `POST /api/keys` - Generate API key pair
+- `GET /api/rooms` - List rooms
+- `POST /api/tokens` - Generate room token (via SDK)
+
+---
+
+## Comparison with LiveKit
+
+| Feature | ZenLive | LiveKit |
+|---------|---------|---------|
+| WebRTC SFU | ✅ | ✅ |
+| API Key Auth | ✅ | ✅ |
+| Token-based Access | ✅ | ✅ |
+| Docker Deployment | ✅ | ✅ |
+| Redis Scaling | ✅ | ✅ |
+| Architecture | Monorepo | Separate repos |
+| Go SDK | Same repo | `livekit-go` |
+| JS/Mobile SDKs | Planned | ✅ |
+
+**Note:** ZenLive uses a monorepo approach (server + SDK together) for faster development. Can be split into separate repos like LiveKit in the future.
+
+---
+
+## Production Deployment
+
+### Security Checklist
+
+- [ ] Change `jwt_secret` in production
+- [ ] Generate unique API keys (don't use defaults)
+- [ ] Enable HTTPS/TLS for API endpoint
+- [ ] Enable WSS for WebSocket signaling
+- [ ] Configure TURN servers for NAT traversal
+- [ ] Set up firewall rules (ports 7880, 7881)
+- [ ] Enable Redis authentication
+- [ ] Use environment variables for secrets
+
+### Monitoring
+
+Prometheus metrics at `http://localhost:9090/metrics`:
+- Active rooms count
+- Participant count
+- WebRTC tracks
+- API request rate
+
+---
+
+## Publishing Docker Image
+
+```bash
+# Login
+docker login
+
+# Build and tag
+make docker
+
+# Push to Docker Hub
+make docker-push
+
+# Users can pull
+docker pull aminofox/zenlive:latest
+```
+
+---
+
+## Contributing
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines.
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE)
+
+---
+
+## Support
+
+- **Documentation:** [docs/](docs/)
+- **Examples:** [examples/](examples/)
+- **Issues:** [GitHub Issues](https://github.com/aminofox/zenlive/issues)
 
 ## ✨ Features
 
