@@ -371,7 +371,7 @@ github.com/aminofox/zenlive
 - Cannot version separately
 - No multi-language SDK
 
-### Future (LiveKit Style)
+### Future (Modular Architecture)
 
 ```
 zenlive-server          # Server only

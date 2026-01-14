@@ -316,18 +316,6 @@ We welcome contributions! Please:
 | `pkg/security/` | Security | Encryption, RateLimiter |
 | `pkg/cluster/` | Clustering | LoadBalancer, Discovery |
 
-## 🌟 Comparison with Other Platforms
-
-| Feature | ZenLive | LiveKit | Agora | Twilio |
-|---------|---------|---------|-------|--------|
-| Open Source | ✅ MIT | ✅ Apache | ❌ | ❌ |
-| Self-Hosted | ✅ | ✅ | ❌ | ❌ |
-| WebRTC | ✅ | ✅ | ✅ | ✅ |
-| RTMP | ✅ | ❌ | ❌ | ❌ |
-| HLS | ✅ | Egress | ✅ | ✅ |
-| Recording | ✅ Local/S3 | ✅ Egress | ✅ Cloud | ✅ Cloud |
-| Pricing | Free | Free (self) | Per min | Per min |
-| Language | Go | Go | SDK | SDK |
 
 ## 🤝 Community & Support
 

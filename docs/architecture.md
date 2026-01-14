@@ -2,7 +2,7 @@
 
 ## Overview
 
-ZenLive is a **video conferencing and livestreaming platform** similar to LiveKit, built entirely in Go. It provides real-time video/audio communication using WebRTC SFU (Selective Forwarding Unit) architecture, combined with traditional streaming protocols (RTMP/HLS).
+ZenLive is a **video conferencing and livestreaming platform** built entirely in Go. It provides real-time video/audio communication using WebRTC SFU (Selective Forwarding Unit) architecture, combined with traditional streaming protocols (RTMP/HLS).
 
 ## Design Philosophy
 

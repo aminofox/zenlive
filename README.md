@@ -4,12 +4,12 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/aminofox/zenlive)](https://hub.docker.com/r/aminofox/zenlive)
 
-Production-ready WebRTC SFU server for live streaming and video conferencing. Built with Go, similar to LiveKit architecture.
+Production-ready WebRTC SFU server for live streaming and video conferencing. Built with Go.
 
 ## Features
 
 - **WebRTC SFU** - Selective Forwarding Unit for efficient media streaming
-- **API Key Authentication** - Secure token-based room access like LiveKit
+- **API Key Authentication** - Secure token-based room access with JWT
 - **Multi-Protocol** - RTMP, HLS, WebRTC support
 - **Real-time Communication** - Video calls, live streaming, screen sharing
 - **Redis Integration** - Horizontal scaling with distributed session management
@@ -305,22 +305,6 @@ zenlive/
 
 ---
 
-## Comparison with LiveKit
-
-| Feature | ZenLive | LiveKit |
-|---------|---------|---------|
-| WebRTC SFU | ✅ | ✅ |
-| API Key Auth | ✅ | ✅ |
-| Token-based Access | ✅ | ✅ |
-| Docker Deployment | ✅ | ✅ |
-| Redis Scaling | ✅ | ✅ |
-| Architecture | Monorepo | Separate repos |
-| Go SDK | Same repo | `livekit-go` |
-| JS/Mobile SDKs | Planned | ✅ |
-
-**Note:** ZenLive uses a monorepo approach (server + SDK together) for faster development. Can be split into separate repos like LiveKit in the future.
-
----
 
 ## Production Deployment
 
